@@ -26,12 +26,6 @@ import matplotlib.pyplot as plt
 #matplotlib 畫圖與秀圖
 
 
-
-
-
-
-
-
 # 讀取數據
 data = pd.read_csv('dataset.csv')
 
@@ -74,4 +68,4 @@ plt.ylabel('Faults')
 plt.legend()
 
 # 顯示圖表
-plt.show()
+plt.savefig('LR.png')

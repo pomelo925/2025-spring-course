@@ -34,3 +34,13 @@ def pos_int(p):
 def distance(n1, n2):
         d = np.array(n1) - np.array(n2)
         return np.hypot(d[0], d[1])
+
+def get_neighbors(node, grid):
+    neighbors = []
+    x, y = node
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+    for dx, dy in directions:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < grid.shape[0] and 0 <= ny < grid.shape[1] and grid[nx, ny] == 0:
+            neighbors.append((nx, ny))
+    return neighbors

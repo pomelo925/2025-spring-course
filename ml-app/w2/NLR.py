@@ -69,4 +69,4 @@ plt.ylabel('Faults')
 plt.legend()
 
 # 顯示圖表
-plt.show()
+plt.savefig('NLR.png')

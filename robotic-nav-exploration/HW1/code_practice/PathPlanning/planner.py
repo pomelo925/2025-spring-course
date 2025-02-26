@@ -7,4 +7,3 @@ class Planner:
     @abc.abstractmethod
     def planning(self, start, goal):
         return NotImplementedError
-
