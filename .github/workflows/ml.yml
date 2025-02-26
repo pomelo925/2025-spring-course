@@ -1,0 +1,51 @@
+name: CI/CD for 2025-spring-source image build & push
+
+on:
+  push:
+    branches: [ main, pomelo925 ]
+    paths:
+      - ml-app/docker/Dockerfile
+      - .github/workflows/ml.yml
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - 
+      name: Repo Checkout 
+      uses: actions/checkout@v4
+    - 
+      name: Docker meta
+      id: meta
+      # Ref: https://github.com/docker/metadata-action
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ secrets.DOCKERHUB_USERNAME }}/2025-spring-course
+        tags: ml-app
+    - 
+      name: Docker Hub Log-in
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+    # Build Docker image
+    - 
+      name: Build Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ml-app/docker
+        load: true # Load the image into Docker environment
+        tags: ${{ steps.meta.outputs.tags }}
+        push: false
+        no-cache: true
+
+    # Push Docker image to registry
+    - 
+      name: Push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ml-app/docker
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        no-cache: true

@@ -1,0 +1,33 @@
+#############################
+###    shared settings    ###
+#############################
+x-common-settings: &common
+  build: 
+    context: .  
+    dockerfile: Dockerfile
+  image: pomelo925/2025-spring-course:brain-compoter-interface
+
+  volumes:
+    # GUI
+    - $HOME/.Xauthority:/root/.Xauthority
+    - /tmp/.X11-unix:/tmp/.X11-unix
+
+    # workspace 
+    # - ../../w2:/root/w2
+  
+  environment:
+    - DISPLAY=${DISPLAY}
+  
+  tty: true
+  network_mode: host
+  privileged: true
+  stop_grace_period: 1s
+
+##############################
+###   Container Services   ###
+##############################
+services:
+  raw:
+    <<: [*common]
+    container_name: brain-compoter-interface
+    command: ["/bin/bash"]
