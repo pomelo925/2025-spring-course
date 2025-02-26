@@ -13,7 +13,7 @@ x-common-settings: &common
     - /tmp/.X11-unix:/tmp/.X11-unix
 
     # workspace 
-    - ../../w2:/root/w2
+    - ../w2:/root/w2
   
   environment:
     - DISPLAY=${DISPLAY}
