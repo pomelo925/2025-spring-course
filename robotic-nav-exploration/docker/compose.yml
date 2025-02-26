@@ -14,7 +14,7 @@ x-common-settings: &common
 
     # workspace 
     - ../HW1:/root/HW1
-  
+
   environment:
     - DISPLAY=${DISPLAY}
   
