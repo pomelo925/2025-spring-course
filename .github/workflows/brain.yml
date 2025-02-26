@@ -21,7 +21,7 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: ${{ secrets.DOCKERHUB_USERNAME }}/2025-spring-course
-        tags: brain-compoter-interface
+        tags: brain-computer-interface
     - 
       name: Docker Hub Log-in
       uses: docker/login-action@v3
@@ -34,7 +34,7 @@ jobs:
       name: Build Docker image
       uses: docker/build-push-action@v6
       with:
-        context: robotic-nav-exploration/docker
+        context: brain-computer-interface/docker
         load: true # Load the image into Docker environment
         tags: ${{ steps.meta.outputs.tags }}
         push: false
@@ -45,7 +45,7 @@ jobs:
       name: Push Docker image
       uses: docker/build-push-action@v6
       with:
-        context: robotic-nav-exploration/docker
+        context: brain-computer-interface/docker
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         no-cache: true

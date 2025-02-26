@@ -5,7 +5,7 @@ x-common-settings: &common
   build: 
     context: .  
     dockerfile: Dockerfile
-  image: pomelo925/2025-spring-course:brain-compoter-interface
+  image: pomelo925/2025-spring-course:brain-computer-interface
 
   volumes:
     # GUI
@@ -29,5 +29,5 @@ x-common-settings: &common
 services:
   raw:
     <<: [*common]
-    container_name: brain-compoter-interface
+    container_name: brain-computer-interface
     command: ["/bin/bash"]
