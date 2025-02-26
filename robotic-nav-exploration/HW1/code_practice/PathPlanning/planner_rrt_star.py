@@ -59,35 +59,57 @@ class PlannerRRTStar(Planner):
         self.cost = {}
         self.cost[start] = 0
         goal_node = None
+        
+        r_near = extend_len * 2  # Radius for re-parenting and re-wiring
+
         for it in range(20000):
-            #print("\r", it, len(self.ntree), end="")
             samp_node = self._random_node(goal, self.map.shape)
             near_node = self._nearest_node(samp_node)
             new_node, cost = self._steer(near_node, samp_node, extend_len)
-            if new_node is not False:
-                self.ntree[new_node] = near_node
-                self.cost[new_node] = cost + self.cost[near_node]
-            else:
-                continue
-            if utils.distance(near_node, goal) < extend_len:
-                goal_node = near_node
-                break
-                
-            # TODO: Re-Parent & Re-Wire
 
-            # Draw
+            if new_node is False:
+                continue
+            
+            # Find nearest neighbors
+            near_neighbors = [
+                n for n in self.ntree if utils.distance(n, new_node) < r_near
+            ]
+            
+            # Re-parenting (choose best parent)
+            best_parent = near_node
+            min_cost = self.cost[near_node] + cost
+            for neighbor in near_neighbors:
+                new_cost = self.cost[neighbor] + utils.distance(neighbor, new_node)
+                if new_cost < min_cost and not self._check_collision(neighbor, new_node):
+                    best_parent = neighbor
+                    min_cost = new_cost
+            
+            # Add new node with best parent
+            self.ntree[new_node] = best_parent
+            self.cost[new_node] = min_cost
+
+            # Rewire neighbors to potentially reduce their cost
+            for neighbor in near_neighbors:
+                new_cost = self.cost[new_node] + utils.distance(new_node, neighbor)
+                if new_cost < self.cost[neighbor] and not self._check_collision(new_node, neighbor):
+                    self.ntree[neighbor] = new_node
+                    self.cost[neighbor] = new_cost
+
+            if utils.distance(new_node, goal) < extend_len:
+                goal_node = new_node
+                break
+
+            # Visualization
             if img is not None:
                 for n in self.ntree:
                     if self.ntree[n] is None:
                         continue
                     node = self.ntree[n]
                     cv2.line(img, (int(n[0]), int(n[1])), (int(node[0]), int(node[1])), (0,1,0), 1)
-                # Near Node
                 img_ = img.copy()
-                cv2.circle(img_,utils.pos_int(new_node),5,(0,0.5,1),3)
-                # Draw Image
-                img_ = cv2.flip(img_,0)
-                cv2.imshow("Path Planning",img_)
+                cv2.circle(img_, utils.pos_int(new_node), 5, (0,0.5,1), 3)
+                img_ = cv2.flip(img_, 0)
+                cv2.imshow("Path Planning", img_)
                 k = cv2.waitKey(1)
                 if k == 27:
                     break
@@ -95,11 +117,9 @@ class PlannerRRTStar(Planner):
         # Extract Path
         path = []
         n = goal_node
-        while(True):
-            if n is None:
-                break
-            path.insert(0,n)
-            node = self.ntree[n]
-            n = self.ntree[n] 
+        while n is not None:
+            path.insert(0, n)
+            n = self.ntree[n]
         path.append(goal)
+
         return path

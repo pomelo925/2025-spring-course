@@ -58,16 +58,25 @@ class PlannerRRT(Planner):
         self.cost = {}
         self.cost[start] = 0
         goal_node = None
+        
         for it in range(20000):
             print("\r", it, len(self.ntree), end="")
+            
+            # Sample a random node
             samp_node = self._random_node(goal, self.map.shape)
+            # Find the nearest node in the tree to the sampled node
             near_node = self._nearest_node(samp_node)
+            
+            # Attempt to steer from the nearest node towards the sampled node
             new_node, cost = self._steer(near_node, samp_node, extend_len)
+            # If a valid new node is found, add it to the tree and update the cost
             if new_node is not False:
                 self.ntree[new_node] = near_node
                 self.cost[new_node] = cost + self.cost[near_node]
             else:
                 continue
+            
+            # Check if the goal is reached
             if utils.distance(near_node, goal) < extend_len:
                 goal_node = near_node
                 break
