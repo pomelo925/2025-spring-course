@@ -1,8 +1,6 @@
-
 import cv2
 import sys
 import heapq
-import numpy as np
 sys.path.append("..")
 import PathPlanning.utils as utils
 from PathPlanning.planner import Planner
@@ -14,10 +12,11 @@ class PlannerAStar(Planner):
         self.initialize()
 
     def initialize(self):
-        self.queue = []
+        self.open_list = []
+        self.closed_list = set()
         self.parent = {}
-        self.h = {}  # Distance from start to node
-        self.g = {}  # Distance from node to goal
+        self.g = {}
+        self.h = {}
         self.goal_node = None
 
     def planning(self, start=(100, 200), goal=(375, 520), inter=None, img=None):
@@ -25,76 +24,57 @@ class PlannerAStar(Planner):
             inter = self.inter
         start = (int(start[0]), int(start[1]))
         goal = (int(goal[0]), int(goal[1]))
-        
-        # Initialize the algorithm
+
         self.initialize()
-        self.queue.append((0, start))  # `pri`ority queue with (cost, node)
-        self.parent[start] = None
         self.g[start] = 0
         self.h[start] = utils.distance(start, goal)
-        
-        img_copy = img.copy()
-        
-        while self.queue:
-            # Get the node with the lowest cost
-            _, current = heapq.heappop(self.queue)
+        heapq.heappush(self.open_list, (self.g[start] + self.h[start], start))
 
-            # Visualization:　current node
-            cv2.circle(img_copy, current, 2, (255, 0, 0), -1)
-            cv2.imshow("A* Pathfinding", img_copy)
+        while self.open_list:
+            # Get the node with the smallest value
+            _, current_node = heapq.heappop(self.open_list)
 
-            if cv2.waitKey(1) == 27:
+            # Skip if visited
+            if current_node in self.closed_list:
+                continue
+
+            # Stop if reached
+            if utils.distance(current_node, goal) < inter:
+                self.goal_node = current_node
                 break
-            
-            # Check if the goal is reached
-            if current == goal:
-                self.goal_node = current
-                break
-            
-            # Explore the neighbors
-            for i in range(-1, 2):
-                for j in range(-1, 2):
-                    # Skip current node
-                    if i == 0 and j == 0:
-                        continue
-                    # Skip diagonal nodes
-                    new_node = (current[0] + i * inter, current[1] + j * inter)
-                    
-                    # Check if the node is valid
-                    if (new_node[1] < 0 or new_node[1] >= self.map.shape[0] or 
-                        new_node[0] < 0 or new_node[0] >= self.map.shape[1] or 
-                        self.map[new_node[1], new_node[0]] < 0.5):
-                        continue
-                    
-                    # Calculate the cost
-                    new_cost = self.g[current] + utils.distance(current, new_node)
 
-                    # Update the cost if it is lower
-                    if new_node not in self.g or new_cost < self.g[new_node]:
-                        self.parent[new_node] = current
-                        self.g[new_node] = new_cost
-                        self.h[new_node] = utils.distance(new_node, goal)
-                        heapq.heappush(self.queue, (self.g[new_node] + self.h[new_node], new_node))
-        
-        # Extract path
+            # Mark the node as visited
+            self.closed_list.add(current_node)
+
+            # Calculate neighboring nodes
+            neighbors = [
+                (current_node[0] + inter, current_node[1]),
+                (current_node[0], current_node[1] + inter),
+                (current_node[0] - inter, current_node[1]),
+                (current_node[0], current_node[1] - inter),
+                (current_node[0] + inter, current_node[1] + inter),
+                (current_node[0] - inter, current_node[1] + inter),
+                (current_node[0] - inter, current_node[1] - inter),
+                (current_node[0] + inter, current_node[1] - inter)
+            ]
+
+            # Ignore invalid nodes: obstacles or visited 
+            for neighbor in neighbors:
+                if self.map[neighbor[1], neighbor[0]] < 0.5 or neighbor in self.closed_list:
+                    continue
+
+                tentative_g = self.g[current_node] + inter
+                if neighbor not in self.g or tentative_g < self.g[neighbor]:
+                    # update path: first visit or shorter path found
+                    self.g[neighbor] = tentative_g
+                    self.h[neighbor] = utils.distance(neighbor, goal)
+                    self.parent[neighbor] = current_node
+
+                    heapq.heappush(self.open_list, (self.g[neighbor] + self.h[neighbor], neighbor))
+
         path = []
         p = self.goal_node
-        if p is None:
-            return path
-        
         while p is not None:
             path.insert(0, p)
-            p = self.parent[p]
-        
-        # Visualization
-        for i in range(len(path) - 1):
-            cv2.line(img_copy, path[i], path[i + 1], (0, 255, 0), 2)
-        
-        cv2.imshow("A* Pathfinding", img_copy)
-        
-        # Wait for ESC key to close
-        while True:
-            if cv2.waitKey(0) == 27:
-                break
-        cv2.destroyAllWindows()
+            p = self.parent.get(p)
         return path
