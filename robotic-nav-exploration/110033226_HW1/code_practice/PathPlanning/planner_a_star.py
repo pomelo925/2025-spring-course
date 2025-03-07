@@ -28,7 +28,7 @@ class PlannerAStar(Planner):
         
         # Initialize the algorithm
         self.initialize()
-        self.queue.append((0, start))  # priority queue with (cost, node)
+        self.queue.append((0, start))  # `pri`ority queue with (cost, node)
         self.parent[start] = None
         self.g[start] = 0
         self.h[start] = utils.distance(start, goal)
