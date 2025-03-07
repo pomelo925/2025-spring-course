@@ -14,6 +14,7 @@ x-common-settings: &common
 
     # workspace 
     - ../110033226_HW1:/110033226_HW1
+    - ../110033226_HW2:/110033226_HW2
 
   environment:
     - DISPLAY=${DISPLAY}
