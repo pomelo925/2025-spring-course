@@ -1,3 +1,4 @@
+import sys
 import argparse
 import numpy as np
 import cv2
@@ -14,6 +15,8 @@ way_points = None
 path = None
 m_cspace = None
 set_controller_path = False
+
+print_info = False
 
 ##############################
 # Navigation
@@ -43,6 +46,7 @@ def render_path(img, nav_pos, way_points, path):
 
 def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
     global pose, nav_pos, way_points, path, set_controller_path
+
     # Initialize
     window_name = "Known Map Navigation Demo"
     cv2.namedWindow(window_name)
@@ -51,12 +55,23 @@ def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
     command = ControlState(args.simulator, None, None)
     pose = start_pose
     collision_count = 0
+
     # Main Loop
     while(True):
-        # Update State
+        # Update [State]
         simulator.step(command)
         pose = (simulator.state.x, simulator.state.y, simulator.state.yaw)
-        print("\r", simulator, "| Goal:", nav_pos, end="\t")
+
+        if print_info:
+            # Erase all output
+            sys.stdout.write("\033[F\033[K\033[F\033[K")
+            
+            state_str = f"[State] x={pose[0]:.4f}, y={pose[1]:.4f}, yaw={pose[2]:.4f}, v={simulator.state.v:.4f}"
+            goal_str = f"[Goal] x={nav_pos[0]}, y={nav_pos[1]}" if nav_pos is not None else "[Goal] None"
+            
+            print(f"\033[93m{goal_str}\033[0m")
+            print(f"\033[94m{state_str}\033[0m")
+
         
         if set_controller_path:
             controller.set_path(path)
@@ -65,17 +80,14 @@ def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
         if path is not None and collision_count == 0:
             # TODO: Planning and Controlling
             if args.simulator == "basic":
-                next_v = 0
-                next_w = 0
+                next_v, next_w = controller.feedback({"x": pose[0], "y": pose[1], "yaw": pose[2], "v": simulator.state.v, "dt": simulator.dt})
                 command = ControlState("basic", next_v, next_w)
             elif args.simulator == "diff_drive":
-                next_lw = 0
-                next_rw = 0
-                command = ControlState("diff_drive", next_lw, next_rw)
+                next_v, next_w = controller.feedback({"x": pose[0], "y": pose[1], "yaw": pose[2], "v": simulator.state.v, "dt": simulator.dt})
+                command = ControlState("diff_drive", next_v, next_w)
             elif args.simulator == "bicycle":
-                next_a = 0
-                next_delta = 0
-                command = ControlState("bicycle", next_a, next_delta)
+                next_v, next_w = controller.feedback({"x": pose[0], "y": pose[1], "yaw": pose[2], "v": simulator.state.v, "dt": simulator.dt})
+                command = ControlState("bicycle", next_v, next_w)
             else:
                 exit()            
         else:
