@@ -20,16 +20,14 @@ class ControllerPurePursuitBasic(Controller):
         x, y, yaw, v = info["x"], info["y"], info["yaw"], info["v"]
 
         # Search Front Target
-        min_idx, min_dist = utils.search_nearest(self.path, (x,y))
-        Ld = self.kp*v + self.Lfc
-        target_idx = min_idx
-        for i in range(min_idx,len(self.path)-1):
-            dist = np.sqrt((self.path[i+1,0]-x)**2 + (self.path[i+1,1]-y)**2)
-            if dist > Ld:
-                target_idx = i
-                break
-        target = self.path[target_idx]
+        min_idx, _ = utils.search_nearest(self.path, (x, y))
+        Ld = self.kp * v + self.Lfc
 
-        # TODO: Pure Pursuit Control for Basic Kinematic Model
-        next_w = 0
-        return next_w, target
+        target_idx = next((i for i in range(min_idx, len(self.path)-1) 
+                    if np.sqrt((self.path[i+1,0]-x)**2 + (self.path[i+1,1]-y)**2) > Ld), len(self.path)-1)
+
+        # Pure Pursuit Control for Basic Kinematic Model
+        target_angle = np.arctan2(self.path[target_idx, 1] - y, self.path[target_idx, 0] - x) - np.deg2rad(yaw)
+        next_w = np.rad2deg(2 * v * np.sin(target_angle) / Ld)
+
+        return next_w

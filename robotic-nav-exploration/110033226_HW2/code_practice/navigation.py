@@ -16,7 +16,7 @@ path = None
 m_cspace = None
 set_controller_path = False
 
-print_info = False
+print_info = True
 
 ##############################
 # Navigation
@@ -46,7 +46,6 @@ def render_path(img, nav_pos, way_points, path):
 
 def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
     global pose, nav_pos, way_points, path, set_controller_path
-
     # Initialize
     window_name = "Known Map Navigation Demo"
     cv2.namedWindow(window_name)
@@ -55,39 +54,71 @@ def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
     command = ControlState(args.simulator, None, None)
     pose = start_pose
     collision_count = 0
-
     # Main Loop
     while(True):
-        # Update [State]
+        # Update State
         simulator.step(command)
         pose = (simulator.state.x, simulator.state.y, simulator.state.yaw)
-
+        
         if print_info:
-            # Erase all output
-            sys.stdout.write("\033[F\033[K\033[F\033[K")
+            sys.stdout.write("\033c")
             
-            state_str = f"[State] x={pose[0]:.4f}, y={pose[1]:.4f}, yaw={pose[2]:.4f}, v={simulator.state.v:.4f}"
+            state_str = f"[State] x={pose[0]:.2f}, y={pose[1]:.2f}, yaw={pose[2]:.2f}, v={simulator.state.v:.2f}"
             goal_str = f"[Goal] x={nav_pos[0]}, y={nav_pos[1]}" if nav_pos is not None else "[Goal] None"
             
+            # ref: https://blog.csdn.net/c_lanxiaofang/article/details/126107796
+            print(f"Simulator: {args.simulator} | Controller: {args.controller} | Planner: {args.planner}")
             print(f"\033[93m{goal_str}\033[0m")
-            print(f"\033[94m{state_str}\033[0m")
+            print(f"\033[95m{state_str}\033[0m")
 
-        
+        # Update Navigation
         if set_controller_path:
             controller.set_path(path)
             set_controller_path = False
 
         if path is not None and collision_count == 0:
-            # TODO: Planning and Controlling
+            # State
+            differtial_state = {
+                "x": simulator.state.x,
+                "y": simulator.state.y,
+                "yaw": simulator.state.yaw,
+                "v": simulator.state.v,
+                "dt": simulator.dt
+            }
+
+            bicycle_state = {
+                "x": simulator.state.x,
+                "y": simulator.state.y,
+                "yaw": simulator.state.yaw,
+                "v": simulator.state.v,
+                "delta": simulator.cstate.delta,
+                "l": simulator.l,
+                "dt": simulator.dt
+            }
+
+            # distance: current <-> goal 
+            distance_to_goal = np.hypot(path[-1, 0]-simulator.state.x, path[-1, 1]-simulator.state.y)
+
+            # Planning and Controlling
             if args.simulator == "basic":
-                next_v, next_w = controller.feedback({"x": pose[0], "y": pose[1], "yaw": pose[2], "v": simulator.state.v, "dt": simulator.dt})
+                next_v = 3 if distance_to_goal > 15 else 0
+                next_w = controller.feedback(differtial_state)
                 command = ControlState("basic", next_v, next_w)
+
             elif args.simulator == "diff_drive":
-                next_v, next_w = controller.feedback({"x": pose[0], "y": pose[1], "yaw": pose[2], "v": simulator.state.v, "dt": simulator.dt})
-                command = ControlState("diff_drive", next_v, next_w)
+                # inherit from basic
+                next_v = 3 if distance_to_goal > 15 else 0
+                next_w = controller.feedback(differtial_state)
+                # kinematic model
+                next_lw = np.rad2deg((next_v - np.deg2rad(next_w) * simulator.l / 2) / (simulator.wu / 2))
+                next_rw = np.rad2deg((next_v + np.deg2rad(next_w) * simulator.l / 2) / (simulator.wu / 2))
+                command = ControlState("diff_drive", next_lw, next_rw)
+
             elif args.simulator == "bicycle":
-                next_v, next_w = controller.feedback({"x": pose[0], "y": pose[1], "yaw": pose[2], "v": simulator.state.v, "dt": simulator.dt})
-                command = ControlState("bicycle", next_v, next_w)
+                # 
+                next_a = (3 - simulator.state.v) if distance_to_goal > 10 else -simulator.state.v
+                next_delta = controller.feedback(bicycle_state)
+                command = ControlState("bicycle", next_a, next_delta)
             else:
                 exit()            
         else:
@@ -97,10 +128,41 @@ def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
         # Collision Handling
         if info["collision"]:
             collision_count = 1
+
         if collision_count > 0:
-            # TODO: Collision Handling
+            # Collision Handling
+            if args.simulator == "basic":
+                next_v = -25
+                command = ControlState("basic", next_v, next_w)
+                simulator.step(command)
+                collision_count += 1
+
+            elif args.simulator == "diff_drive":
+                next_v = -25
+                next_lw = np.rad2deg((next_v - np.deg2rad(next_w) * simulator.l / 2) / (simulator.wu / 2))
+                next_rw = np.rad2deg((next_v + np.deg2rad(next_w) * simulator.l / 2) / (simulator.wu / 2))
+                command = ControlState("diff_drive", next_lw, next_rw)
+                simulator.step(command)
+                collision_count += 1
+
+            elif args.simulator == "bicycle":
+                target_v = -25
+                next_a = target_v - simulator.state.v
+                command = ControlState("bicycle", next_a, next_delta)
+                simulator.step(command)
+                collision_count += 1
+
+            # Re-Planning
+            if collision_count > 10:
+                way_points = planner.planning((pose[0], pose[1]), nav_pos, 20)
+                if len(way_points) > 1:
+                    path = np.array(cubic_spline_2d(way_points, interval=6))
+                    controller.set_path(path)
+                collision_count = 0
             pass
         
+
+
         # Render Path
         img = simulator.render()
         if nav_pos is not None and way_points is not None:

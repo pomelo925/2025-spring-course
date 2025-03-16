@@ -26,6 +26,11 @@ class ControllerStanleyBicycle(Controller):
         min_idx, min_dist = utils.search_nearest(self.path, (front_x,front_y))
         target = self.path[min_idx]
 
-        # TODO: Stanley Control for Bicycle Kinematic Model
-        next_delta = 0
-        return next_delta, target
+        # Stanley Control for Bicycle Kinematic Model
+        theta_p = target[2]
+        theta_e = (theta_p - yaw + 180) % 360 - 180
+        e = np.dot([front_x - target[0], front_y - target[1]],
+               [np.cos(np.deg2rad(theta_p + 90)), np.sin(np.deg2rad(theta_p + 90))])
+        next_delta = np.rad2deg(np.arctan2(-self.kp * e, vf)) + theta_e
+
+        return next_delta
