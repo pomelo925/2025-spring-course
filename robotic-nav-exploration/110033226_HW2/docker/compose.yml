@@ -5,7 +5,7 @@ x-common-settings: &common
   build: 
     context: .  
     dockerfile: Dockerfile
-  image: pomelo925/2025-spring-course:robotic-nav-exploration
+  image: pomelo925/2025-nthu-rne:hw2
 
   volumes:
     # GUI
