@@ -12,9 +12,8 @@ x-common-settings: &common
     - $HOME/.Xauthority:/root/.Xauthority
     - /tmp/.X11-unix:/tmp/.X11-unix
 
-    # workspace 
-    - ../110033226_HW1:/110033226_HW1
-    - ../110033226_HW2:/110033226_HW2
+    # workspace
+    - ../../110033226_HW2:/110033226_HW2
 
   environment:
     - DISPLAY=${DISPLAY}
