@@ -91,7 +91,7 @@ def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
                 "y": simulator.state.y,
                 "yaw": simulator.state.yaw,
                 "v": simulator.state.v,
-                "delta": simulator.cstate.delta,
+                # "delta": simulator.cstate.delta,
                 "l": simulator.l,
                 "dt": simulator.dt
             }
@@ -115,7 +115,6 @@ def navigation(args, simulator, controller, planner, start_pose=(100,200,0)):
                 command = ControlState("diff_drive", next_lw, next_rw)
 
             elif args.simulator == "bicycle":
-                # 
                 next_a = (3 - simulator.state.v) if distance_to_goal > 10 else -simulator.state.v
                 next_delta = controller.feedback(bicycle_state)
                 command = ControlState("bicycle", next_a, next_delta)

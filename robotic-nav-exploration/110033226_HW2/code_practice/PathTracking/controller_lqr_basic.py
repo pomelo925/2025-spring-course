@@ -21,7 +21,7 @@ class ControllerLQRBasic(Controller):
         self.pe = 0
         self.pth_e = 0
     
-    def _solve_DARE(self, A, B, Q, R, max_iter=150, eps=0.01): # Discrete-time Algebra Riccati Equation (DARE)
+    def _solve_DARE(self, A, B, Q, R, max_iter=150, eps=0.01): # Discrete-time Algebraic Riccati Equation (DARE)
         P = Q.copy()
         for i in range(max_iter):
             temp = np.linalg.inv(R + B.T @ P @ B)
@@ -42,11 +42,31 @@ class ControllerLQRBasic(Controller):
         x, y, yaw, v, dt = info["x"], info["y"], info["yaw"], info["v"], info["dt"]
         yaw = utils.angle_norm(yaw)
         
-        # Search Nesrest Target
-        min_idx, min_dist = utils.search_nearest(self.path, (x,y))
+        # Search Nearest Target
+        min_idx, min_dist = utils.search_nearest(self.path, (x, y))
         target = self.path[min_idx]
         target[2] = utils.angle_norm(target[2])
         
-        # TODO: LQR Control for Basic Kinematic Model
-        next_w = 0
-        return next_w, target
+        # LQR Control for Basic Kinematic Model
+        dx = target[0] - x
+        dy = target[1] - y
+        alpha = np.arctan2(dy, dx) - yaw
+        alpha = utils.angle_norm(alpha)
+        
+        A = np.array([[1, 0, -v*dt*np.sin(yaw), dt*np.cos(yaw)],
+                      [0, 1,  v*dt*np.cos(yaw), dt*np.sin(yaw)],
+                      [0, 0,  1, 0],
+                      [0, 0,  0, 1]])
+        
+        B = np.array([[0],
+                      [0],
+                      [dt],
+                      [0]])
+        
+        P = self._solve_DARE(A, B, self.Q, self.R)
+        K = np.linalg.inv(self.R + B.T @ P @ B) @ (B.T @ P @ A)
+        
+        state = np.array([dx, dy, alpha, 0])
+        next_delta = (K @ state).item()
+        
+        return next_delta

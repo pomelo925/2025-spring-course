@@ -8,11 +8,7 @@ class ControllerLQRBicycle(Controller):
     def __init__(self, Q=np.eye(4), R=np.eye(1)):
         self.path = None
         self.Q = Q
-        self.Q[0,0] = 1
-        self.Q[1,1] = 1
-        self.Q[2,2] = 1
-        self.Q[3,3] = 1
-        self.R = R*5000
+        self.R = R
         self.pe = 0
         self.pth_e = 0
 
@@ -21,32 +17,46 @@ class ControllerLQRBicycle(Controller):
         self.pe = 0
         self.pth_e = 0
 
-    def _solve_DARE(self, A, B, Q, R, max_iter=150, eps=0.01): # Discrete-time Algebra Riccati Equation (DARE)
+    def _solve_DARE(self, A, B, Q, R, max_iter=150, eps=1e-6):
         P = Q.copy()
-        for i in range(max_iter):
-            temp = np.linalg.inv(R + B.T @ P @ B)
-            Pn = A.T @ P @ A - A.T @ P @ B @ temp @ B.T @ P @ A + Q
-            if np.abs(Pn - P).max() < eps:
+        for _ in range(max_iter):
+            P_next = Q + A.T @ P @ A - A.T @ P @ B @ np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
+            if np.max(np.abs(P_next - P)) < eps:
                 break
-            P = Pn
-        return Pn
+            P = P_next
+        return P_next
 
-    # State: [x, y, yaw, delta, v, l, dt]
     def feedback(self, info):
-        # Check Path
         if self.path is None:
             print("No path !!")
             return None, None
+
+        x, y, theta, v, L, dt = info["x"], info["y"], info["yaw"], info["v"], info["l"], info["dt"]
+        theta = utils.angle_norm(theta)
         
-        # Extract State 
-        x, y, yaw, delta, v, l, dt = info["x"], info["y"], info["yaw"], info["delta"], info["v"], info["l"], info["dt"]
-        yaw = utils.angle_norm(yaw)
-        
-        # Search Nesrest Target
-        min_idx, min_dist = utils.search_nearest(self.path, (x,y))
+        min_idx, _ = utils.search_nearest(self.path, (x, y))
         target = self.path[min_idx]
-        target[2] = utils.angle_norm(target[2])
+        target_theta = utils.angle_norm(target[2])
         
-        # TODO: LQR Control for Bicycle Kinematic Model
-        next_delta = 0
-        return next_delta, target
+        e = np.hypot(target[0] - x, target[1] - y)
+        e_dot = (e - self.pe) / dt
+        theta_e = utils.angle_norm(target_theta - theta)
+        theta_e_dot = (theta_e - self.pth_e) / dt
+        self.pe, self.pth_e = e, theta_e
+        
+        A = np.array([[1, dt, 0, 0],
+                      [0, 0, v, 0],
+                      [0, 0, 1, dt],
+                      [0, 0, 0, 0]])
+        B = np.array([[0],
+                      [0],
+                      [0],
+                      [v / L]])
+        
+        P = self._solve_DARE(A, B, self.Q, self.R)
+        K = np.linalg.inv(self.R + B.T @ P @ B) @ B.T @ P @ A
+        
+        state = np.array([[e], [e_dot], [theta_e], [theta_e_dot]])
+        delta = (K @ state).item()
+        
+        return delta
