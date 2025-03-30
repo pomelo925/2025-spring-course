@@ -9,8 +9,8 @@ RUN apt update && apt install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install \
-    numpy==1.20.* \
-    matplotlib \ 
+    numpy>=1.20 \
+    matplotlib \
     opencv-python-headless \
     torch \
     cloudpickle
