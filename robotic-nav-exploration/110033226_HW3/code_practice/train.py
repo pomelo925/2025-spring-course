@@ -11,27 +11,26 @@ def main():
 	#TODO 5: Adjust these parameters if needed
 	#Parameters that can be modified
 	#----------------------------
-	n_env          = 8
-	n_step         = 128
-	sample_mb_size = 64
-	sample_n_epoch = 4
-	a_std          = 0.5
-	lamb           = 0.95
-	gamma          = 0.99
-	clip_val       = 0.2
-	lr             = 1e-4
-	n_iter         = 30000
-	device         = 'cpu'
-
+	n_env = 8              # 並行的環境數量
+	n_step = 128           # 每個環境收集的步數（總 batch 為 n_env*n_step）
+	sample_mb_size = 64    # 每一個 mini-batch 大小
+	sample_n_epoch = 4     # 每個訓練樣本被使用的次數
+	a_std = 0.5            # 動作標準差（高斯策略用）
+	lamb = 0.95            # GAE λ
+	gamma = 0.99           # 折扣因子
+	clip_val = 0.2         # PPO 的剪裁參數
+	lr = 1e-5              # 學習率
+	n_iter = 30000         # 總訓練 iteration 次數
+	device = 'cpu'         # 運行設備（改成 'cuda' 可用 GPU）
 	#Parameters that are fixed
 	#----------------------------
-	s_dim          = 14
-	a_dim          = 1
-	mb_size        = n_env*n_step
-	max_grad_norm  = 0.5
+	s_dim = 14      # 狀態維度（觀察空間）
+	a_dim = 1       # 動作維度
+	mb_size = n_env * n_step  # mini-batch size（由環境數與步數決定）
+	max_grad_norm = 0.5       # 梯度裁剪上限
 	disp_step      = 20
-	save_step      = 100
-	check_step     = 500
+	save_step      = 5000
+	check_step     = 10000
 	save_dir       = './save'
 
 	#Create multiple environments

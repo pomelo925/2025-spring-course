@@ -17,7 +17,15 @@ x-common-settings: &common
 
   environment:
     - DISPLAY=${DISPLAY}
-  
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - capabilities: [gpu]
+
   tty: true
   network_mode: host
   privileged: true
@@ -29,5 +37,5 @@ x-common-settings: &common
 services:
   raw:
     <<: [*common]
-    container_name: robotic-nav-exploration
+    container_name: hw3_raw
     command: ["/bin/bash"]

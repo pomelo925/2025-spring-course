@@ -122,4 +122,3 @@ if __name__ == "__main__":
     img = cv2.flip(img,0)
     cv2.imshow("Cubic Spline Test", img)
     cv2.waitKey(0)
-    
