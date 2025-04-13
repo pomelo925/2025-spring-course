@@ -21,7 +21,7 @@ def main():
 	clip_val = 0.2         # PPO 的剪裁參數
 	lr = 1e-5              # 學習率
 	n_iter = 30000         # 總訓練 iteration 次數
-	device = 'cpu'         # 運行設備（改成 'cuda' 可用 GPU）
+	device = 'cuda'         # 運行設備（改成 'cuda' 可用 GPU）
 	#Parameters that are fixed
 	#----------------------------
 	s_dim = 14      # 狀態維度（觀察空間）
